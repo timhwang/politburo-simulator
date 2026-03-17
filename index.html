@@ -2366,17 +2366,6 @@ function renderCongress(area) {
     `;
   }
 
-  // Notable colleagues
-  const colleagues = getMembersAtCongress(congress).filter(m => m.n !== gameState.character.n).slice(0, 8);
-  let colleagueList = colleagues.map(c => {
-    let color, titleTip;
-    if (c.fate === 'E') { color = '#ff6666'; titleTip = 'Historically executed'; }
-    else if (c.fate === 'A') { color = '#ff44ff'; titleTip = 'Historically assassinated'; }
-    else if (c.fate === 'S') { color = '#ffaa44'; titleTip = 'Historically driven to suicide'; }
-    else { color = '#aaa'; titleTip = 'Died of natural causes'; }
-    return `<span style="color:${color};cursor:help;border-bottom:1px dotted ${color};" title="${titleTip} (${c.born}–${c.died || '?'})">${c.n}</span>`;
-  }).join(', ');
-  const colleagueLegend = `<span style="font-size:0.75em;display:block;margin-top:4px;color:#6a5a3a;">Color key: <span style="color:#aaa;">natural death</span> · <span style="color:#ff6666;">executed</span> · <span style="color:#ffaa44;">suicide</span> · <span style="color:#ff44ff;">assassinated</span></span>`;
 
   let narrativeHtml = '';
   let choicesHtml = '';
@@ -2387,7 +2376,6 @@ function renderCongress(area) {
   if (currentScenario) {
     narrativeHtml = `
       <p>${currentScenario.text}</p>
-      <p class="historical-note">Fellow Politburo members at this Congress: ${colleagueList}${colleagueLegend}</p>
     `;
     const choices = currentScenario.choices || [];
     // Get continuity bonus choices
