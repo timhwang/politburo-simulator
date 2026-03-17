@@ -162,6 +162,160 @@ const continuityTriggers = {
     description: 'Left the Party with Yeltsin',
     appliesTo: [], // Terminal — no future congresses
     bonusChoice: null
+  },
+
+  // ============================================================
+  // WAVE 2 — 15 additional continuity triggers
+  // ============================================================
+
+  'denounced_colleagues': {
+    description: 'Actively denounced fellow party members',
+    appliesTo: [18, 19, 20, 21, 22],
+    bonusChoice: {
+      text: 'Your record of denunciations proves your vigilance — remind the Congress you rooted out enemies when others hesitated.',
+      loyalty: 10, cunning: 3, reputation: -12, survival: 0.82,
+      response: 'Your denunciations are on file. In Stalin\'s era this proves loyalty, but survivors and their families have long memories. When the wind changes, the denouncers become the denounced.'
+    }
+  },
+
+  'protected_minorities': {
+    description: 'Defended Jewish or minority colleagues during persecution campaigns',
+    appliesTo: [19, 20, 21, 22, 23],
+    bonusChoice: {
+      text: 'Persecuted intellectuals remember your quiet protection — their gratitude now translates into influential support.',
+      loyalty: -3, cunning: 5, reputation: 12, survival: 0.88,
+      response: 'The people you shielded during the anti-cosmopolitan campaigns have not forgotten. In the thaw, moral courage is finally rewarded — the intelligentsia rallies behind those with clean hands.'
+    }
+  },
+
+  'advocated_consumer_goods': {
+    description: 'Pushed for consumer goods over heavy industry',
+    appliesTo: [22, 23, 24, 25, 26, 27, 28],
+    bonusChoice: {
+      text: 'Cite your long record of fighting for ordinary citizens\' living standards — the people\'s needs must come first.',
+      loyalty: -2, cunning: 5, reputation: 10, survival: 0.87,
+      response: 'Your consistent advocacy for consumer welfare gives you populist credentials that resonate across eras. As the system struggles to deliver, your pragmatism looks prophetic.'
+    }
+  },
+
+  'built_regional_base': {
+    description: 'Cultivated a provincial or republican power base',
+    appliesTo: [19, 20, 21, 22, 23, 24, 25],
+    bonusChoice: {
+      text: 'Mobilize your regional political machine — your provincial allies rally to defend you from Moscow intrigues.',
+      loyalty: 3, cunning: 10, reputation: 3, survival: 0.91,
+      response: 'Distance from Moscow proved wise. Your regional network operates like a state within a state, providing political cover that pure Kremlin insiders lack. Khrushchev and Brezhnev both rose this way.'
+    }
+  },
+
+  'documented_truth': {
+    description: 'Wrote honest reports about famine or policy failures',
+    appliesTo: [19, 20, 21, 22, 23, 24],
+    bonusChoice: {
+      text: 'Your confidential reports told the truth when others lied — invoke your record of honest assessment.',
+      loyalty: -5, cunning: 8, reputation: 10, survival: 0.85,
+      response: 'Truth-tellers were rare and endangered under Stalin. But the archives remember, and when new leaders need honest advisors, your reputation for integrity becomes invaluable.'
+    }
+  },
+
+  'championed_science': {
+    description: 'Supported real science over ideological pseudoscience',
+    appliesTo: [21, 22, 23, 24, 25, 26, 27, 28],
+    bonusChoice: {
+      text: 'Your defense of genuine science over Lysenkoist fraud gives you credibility with the technical intelligentsia.',
+      loyalty: -3, cunning: 8, reputation: 8, survival: 0.88,
+      response: 'As the Soviet Union increasingly depends on scientific achievement — nuclear, space, computing — those who defended real science against charlatans earn lasting respect from the expert class.'
+    }
+  },
+
+  'pursued_foreign_ties': {
+    description: 'Advocated technology transfer and foreign relations',
+    appliesTo: [22, 23, 24, 25, 26, 27, 28],
+    bonusChoice: {
+      text: 'Your international contacts and knowledge of Western technology make you indispensable in the era of détente.',
+      loyalty: 0, cunning: 10, reputation: 5, survival: 0.89,
+      response: 'While ideologues debated doctrine, you built bridges. Your foreign contacts and understanding of the outside world make you a rare asset as the USSR engages with global realities.'
+    }
+  },
+
+  'supported_nationality_rights': {
+    description: 'Defended national autonomy and self-determination',
+    appliesTo: [27, 28],
+    bonusChoice: {
+      text: 'As the republics demand sovereignty, your long record of respecting national rights makes you a trusted mediator.',
+      loyalty: -5, cunning: 5, reputation: 15, survival: 0.85,
+      response: 'The nationality question tears the Union apart, but your history of defending autonomy makes you credible to both sides. In the final crisis, trust is the rarest currency of all.'
+    }
+  },
+
+  'hardline_enforcer': {
+    description: 'Enthusiastically enforced purges and party discipline',
+    appliesTo: [18, 19, 20, 21],
+    bonusChoice: {
+      text: 'Your fearsome reputation as an enforcer makes even potential accusers think twice — they know you will fight back ruthlessly.',
+      loyalty: 8, cunning: 5, reputation: -10, survival: 0.83,
+      response: 'Fear is its own protection. Those who carried out the purges with enthusiasm are themselves feared — and fear keeps rivals at bay. But when the system demands accountability, enforcers are first against the wall.'
+    }
+  },
+
+  'nuclear_program_supporter': {
+    description: 'Backed the atomic weapons and space programs',
+    appliesTo: [20, 21, 22, 23, 24],
+    bonusChoice: {
+      text: 'Invoke your role in building the USSR\'s nuclear and space capabilities — these achievements are beyond political reproach.',
+      loyalty: 5, cunning: 3, reputation: 12, survival: 0.92,
+      response: 'Sputnik, the bomb, Gagarin — the Soviet Union\'s greatest prestige achievements. Your association with these programs gives you a patriotic shield that transcends factional politics.'
+    }
+  },
+
+  'criticized_bureaucracy': {
+    description: 'Spoke against bureaucratic bloat and inefficiency',
+    appliesTo: [22, 23, 24, 25, 26, 27, 28],
+    bonusChoice: {
+      text: 'Your anti-bureaucratic credentials appeal to every new leader who promises reform — you were fighting the machine before it was fashionable.',
+      loyalty: 0, cunning: 8, reputation: 8, survival: 0.88,
+      response: 'Every Soviet leader from Khrushchev to Gorbachev promised to cut the bureaucracy. Your consistent criticism of administrative bloat makes you a natural ally for reformers across generations.'
+    }
+  },
+
+  'cultural_hardliner': {
+    description: 'Championed socialist realism and cultural orthodoxy',
+    appliesTo: [20, 21, 22, 23],
+    bonusChoice: {
+      text: 'Rally cultural conservatives who see de-Stalinization as a threat to socialist values — position yourself as defender of tradition.',
+      loyalty: 8, cunning: 5, reputation: -5, survival: 0.84,
+      response: 'The cultural establishment — writers\' unions, editors, censors — depends on orthodoxy for their jobs. Your cultural hardline stance gives you a ready-made constituency, but reformers mark you as an obstacle.'
+    }
+  },
+
+  'military_hawk': {
+    description: 'Consistently pushed for military spending and strength',
+    appliesTo: [21, 22, 23, 24, 25, 26],
+    bonusChoice: {
+      text: 'The defense establishment backs you as one of their own — generals and marshals vouch for your patriotic credentials.',
+      loyalty: 5, cunning: 3, reputation: 5, survival: 0.90,
+      response: 'The Soviet military-industrial complex is the most powerful institution in the state. Having the generals in your corner provides formidable protection, though it costs you with reformers.'
+    }
+  },
+
+  'supported_detente': {
+    description: 'Backed peaceful coexistence and arms control',
+    appliesTo: [25, 26, 27, 28],
+    bonusChoice: {
+      text: 'Your record supporting détente and arms control makes you credible in the era of disarmament — Gorbachev needs experienced hands.',
+      loyalty: 0, cunning: 8, reputation: 10, survival: 0.89,
+      response: 'The arms race bankrupted the Soviet economy. Your early advocacy for diplomatic solutions now looks prescient. In the final years, those who understood the outside world are essential.'
+    }
+  },
+
+  'master_bureaucrat': {
+    description: 'Built deep institutional expertise across party agencies',
+    appliesTo: [23, 24, 25, 26, 27, 28],
+    bonusChoice: {
+      text: 'You know where every lever of power is and how to pull it — your institutional knowledge makes you impossible to replace.',
+      loyalty: 3, cunning: 12, reputation: 0, survival: 0.92,
+      response: 'Leaders come and go, but the apparatus endures. Your encyclopedic knowledge of how the system actually functions — who controls what, which committees matter — makes you the ultimate insider survivor.'
+    }
   }
 };
 
@@ -183,6 +337,22 @@ const choiceTagRules = [
   { pattern: /cautious.*reform|managed reform|careful.*modern|steady.*achievable/i, tag: 'cautious_reformer' },
   { pattern: /production statistics|economic.*management|industrial.*achieve|economic data|factory output/i, tag: 'economic_expertise' },
   { pattern: /walk out with yeltsin|follow yeltsin/i, tag: 'walked_out_with_yeltsin' },
+  // Wave 2 tag rules
+  { pattern: /denounce.*colleague|inform.*nkvd|report.*disloyal|name.*conspirator|accuse.*treachery/i, tag: 'denounced_colleagues' },
+  { pattern: /protect.*jewish|defend.*minority|shield.*cosmopolitan|help.*persecuted|quietly.*transfer/i, tag: 'protected_minorities' },
+  { pattern: /consumer goods|living standards|butter.*guns|housing.*workers|light industry/i, tag: 'advocated_consumer_goods' },
+  { pattern: /provincial.*position|regional.*power|republican.*posting|local.*machine|build.*base.*outside/i, tag: 'built_regional_base' },
+  { pattern: /honest report|true.*conditions|document.*famine|accurate.*casualties|real.*harvest/i, tag: 'documented_truth' },
+  { pattern: /real science|genuine.*research|oppose.*lysenko|genetics.*must|reject.*pseudo/i, tag: 'championed_science' },
+  { pattern: /foreign.*technology|western.*method|technology transfer|international.*cooperat|trade.*agreement/i, tag: 'pursued_foreign_ties' },
+  { pattern: /national.*autonomy|republic.*rights|self.?determination|national.*language|cultural.*autonomy/i, tag: 'supported_nationality_rights' },
+  { pattern: /root out.*enem|enforce.*discipline|unmask.*wrecker|intensify.*vigilance|crush.*opposition/i, tag: 'hardline_enforcer' },
+  { pattern: /nuclear.*program|atomic.*weapon|space.*program|rocket.*development|missile.*capability/i, tag: 'nuclear_program_supporter' },
+  { pattern: /cut.*bureaucracy|streamline.*apparat|reduce.*paperwork|bloated.*administration|too many.*officials/i, tag: 'criticized_bureaucracy' },
+  { pattern: /socialist realism|ideological.*purity.*art|censor.*bourgeois|cultural.*discipline|party.*control.*art/i, tag: 'cultural_hardliner' },
+  { pattern: /increase.*military|defense.*spending|army.*strength|more.*tanks|military.*budget/i, tag: 'military_hawk' },
+  { pattern: /peaceful.*coexistence|arms.*control|d[eé]tente|reduce.*tension|nuclear.*disarmament/i, tag: 'supported_detente' },
+  { pattern: /institutional.*knowledge|committee.*expertise|apparatus.*experience|procedural.*master|know.*every.*department/i, tag: 'master_bureaucrat' },
 ];
 
 // Call after each choice to assign tags

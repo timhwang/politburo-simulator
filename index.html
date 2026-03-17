@@ -1371,6 +1371,9 @@ let gameState = {
   speedRunChoiceTime: 15, // seconds per choice
   // Scenario lock
   scenarioCongressNum: null,
+  // Orthodoxy accumulator — tracks ideological commitment that becomes dangerous in reform eras
+  orthodoxy: 0,           // 0-100, accumulates with loyalty choices in authoritarian eras
+  politicalBaggage: [],   // [{era, description, severity}] records of compromising commitments
   // Continuity system
   continuityTags: [],     // tags earned from past choices
   previousMembers: [],    // member names at previous congress (for tracker delta)
@@ -1912,6 +1915,7 @@ function render() {
   switch (gameState.phase) {
     case 'title': renderTitle(area); break;
     case 'modeselect': renderModeSelect(area); break;
+    case 'tutorial': renderTutorial(area); break;
     case 'select': renderSelect(area); break;
     case 'playing': renderCongress(area); break;
     case 'gameover': renderGameOver(area); break;
@@ -1967,8 +1971,91 @@ function selectMode(mode) {
 }
 
 function confirmMode() {
+  gameState.phase = 'tutorial';
+  render();
+}
+
+function dismissTutorial() {
   gameState.phase = 'select';
   render();
+}
+
+function renderTutorial(area) {
+  area.innerHTML = `
+    <div id="narrative" style="max-width:700px;margin:0 auto;">
+      <h2 style="text-align:center;color:#c0392b;font-family:'Special Elite',cursive;font-size:1.8em;margin-bottom:20px;">How to Survive the Politburo</h2>
+      <p style="text-align:center;color:#8a7a5a;margin-bottom:30px;">Four forces shape your fate. Master them — or be consumed by them.</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px;">
+        <div style="background:rgba(200,50,50,0.1);border:1px solid #5a3a3a;border-radius:8px;padding:16px;">
+          <div style="font-size:2em;text-align:center;margin-bottom:8px;">⚑</div>
+          <h3 style="color:#ff4444;text-align:center;font-family:'Special Elite',cursive;margin-bottom:8px;">Loyalty</h3>
+          <p style="font-size:0.85em;color:#b0a080;line-height:1.5;">Your devotion to the party leadership. Under Stalin, <strong style="color:#ff6666;">low loyalty is death</strong>. But blind loyalty creates commitments that haunt you when the political winds change.</p>
+          <div style="margin-top:10px;padding:8px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:0.78em;color:#8a7a5a;">
+            <strong>Stalin era:</strong> Below 40 = severe danger<br>
+            <strong>Reform era:</strong> Above 80 = suspicion from reformers
+          </div>
+        </div>
+
+        <div style="background:rgba(50,50,200,0.1);border:1px solid #3a3a5a;border-radius:8px;padding:16px;">
+          <div style="font-size:2em;text-align:center;margin-bottom:8px;">⚔</div>
+          <h3 style="color:#4488ff;text-align:center;font-family:'Special Elite',cursive;margin-bottom:8px;">Cunning</h3>
+          <p style="font-size:0.85em;color:#b0a080;line-height:1.5;">Your political instinct and survival skill. Cunning <strong style="color:#6699ff;">always helps survival</strong> regardless of era. The shrewd outlast the brave and the loyal alike.</p>
+          <div style="margin-top:10px;padding:8px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:0.78em;color:#8a7a5a;">
+            <strong>Every era:</strong> Higher cunning = better survival odds<br>
+            <strong>Tradeoff:</strong> High cunning erodes loyalty and reputation
+          </div>
+        </div>
+
+        <div style="background:rgba(50,200,50,0.1);border:1px solid #3a5a3a;border-radius:8px;padding:16px;">
+          <div style="font-size:2em;text-align:center;margin-bottom:8px;">☆</div>
+          <h3 style="color:#44cc44;text-align:center;font-family:'Special Elite',cursive;margin-bottom:8px;">Reputation</h3>
+          <p style="font-size:0.85em;color:#b0a080;line-height:1.5;">Your standing among peers and the public. High reputation helps in most eras, but under Stalin, <strong style="color:#ff6666;">prominence is dangerous</strong> — the leader fears those who shine too brightly.</p>
+          <div style="margin-top:10px;padding:8px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:0.78em;color:#8a7a5a;">
+            <strong>Normal:</strong> Above 60 = slight survival boost<br>
+            <strong>Stalin era:</strong> Above 75 = you become a target
+          </div>
+        </div>
+
+        <div style="background:rgba(200,150,50,0.1);border:1px solid #5a4a3a;border-radius:8px;padding:16px;">
+          <div style="font-size:2em;text-align:center;margin-bottom:8px;">☭</div>
+          <h3 style="color:#cc8833;text-align:center;font-family:'Special Elite',cursive;margin-bottom:8px;">Orthodoxy</h3>
+          <p style="font-size:0.85em;color:#b0a080;line-height:1.5;">Your accumulated record of ideological commitment. Orthodoxy <strong style="color:#44aa44;">protects you under authoritarian rule</strong>, but becomes <strong style="color:#ff6666;">deadly political baggage</strong> when reforms come.</p>
+          <div style="margin-top:10px;padding:8px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:0.78em;color:#8a7a5a;">
+            <strong>Stalin era:</strong> High orthodoxy = strong protection<br>
+            <strong>Thaw/Perestroika:</strong> High orthodoxy = severe danger
+          </div>
+        </div>
+      </div>
+
+      <div style="background:rgba(100,80,50,0.15);border:1px solid #5a4a3a;border-radius:8px;padding:16px;margin-bottom:25px;">
+        <h3 style="color:#c0392b;font-family:'Special Elite',cursive;text-align:center;margin-bottom:12px;">The Core Dilemma</h3>
+        <p style="font-size:0.9em;color:#b0a080;line-height:1.6;text-align:center;">
+          In the early game, you must show <strong style="color:#ff4444;">fanatical loyalty</strong> to survive Stalin's purges.
+          But every loyal act builds <strong style="color:#cc8833;">orthodoxy</strong> — a record that becomes
+          <strong style="color:#ff6666;">lethal baggage</strong> when Khrushchev's thaw and Gorbachev's reforms arrive.
+          The game is about knowing <strong style="color:#6699ff;">when to start shifting</strong> your positions to survive.
+        </p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:25px;">
+        <div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:12px;">
+          <h4 style="color:#8a7a5a;font-family:'Special Elite',cursive;margin-bottom:6px;">↔ Faction Tracks</h4>
+          <p style="font-size:0.8em;color:#8a7a5a;line-height:1.4;">Your economic position (Left ↔ Right) and policy stance (Dove ↔ Hawk) create additional risks. Being too far from the era's center of power is dangerous.</p>
+        </div>
+        <div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:12px;">
+          <h4 style="color:#8a7a5a;font-family:'Special Elite',cursive;margin-bottom:6px;">🤝 Political Alliances</h4>
+          <p style="font-size:0.8em;color:#8a7a5a;line-height:1.4;">Form alliances for protection, or betray allies for short-term gain. But allies who fall from power become liabilities — their disgrace taints you.</p>
+        </div>
+      </div>
+
+      <div style="text-align:center;">
+        <button class="choice-btn" onclick="dismissTutorial()" style="display:inline-block;max-width:400px;">
+          <span class="choice-label">★</span> Choose Your Comrade
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 function renderSelect(area) {
@@ -2076,6 +2163,14 @@ function renderCongress(area) {
   // Status bar (hidden in Iron Curtain mode)
   let statusHtml = '';
   if (!isIronCurtain) {
+    // Orthodoxy color: green (low/safe) → yellow (moderate) → red (high/dangerous in reform eras)
+    const orthoVal = Math.round(gameState.orthodoxy);
+    const isReformNow = ['Thaw','Khrushchev','Perestroika','Collapse'].includes(congress.era);
+    const orthoColor = orthoVal < 25 ? '#44aa44' : orthoVal < 50 ? '#aaaa44' : orthoVal < 75 ? '#cc8833' : '#cc3333';
+    const orthoWarning = isReformNow && orthoVal > 50 ? ' ⚠' : '';
+    const orthoTooltip = isReformNow
+      ? 'Orthodox Reputation — your accumulated ideological commitments now endanger you as reforms advance'
+      : 'Orthodox Reputation — tracks your record of ideological commitment. Helps under authoritarian rule, hurts during reforms.';
     statusHtml = `
       <div id="status-bar">
         <div class="stat-box" title="Loyalty to party leadership">
@@ -2093,6 +2188,11 @@ function renderCongress(area) {
           <div class="stat-value">${gameState.reputation}</div>
           <div class="stat-bar"><div class="stat-bar-fill reputation-fill" style="width:${gameState.reputation}%"></div></div>
         </div>
+        <div class="stat-box" title="${orthoTooltip}">
+          <div class="stat-label">Orthodoxy${orthoWarning}</div>
+          <div class="stat-value" style="color:${orthoColor}">${orthoVal}</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:${orthoVal}%;background:${orthoColor}"></div></div>
+        </div>
       </div>
     `;
   }
@@ -2107,26 +2207,33 @@ function renderCongress(area) {
     const isAuth = ['Stalin consolidating','Collectivization','Pre-Terror','Post-Terror','Late Stalin'].includes(congress.era);
     const isReform = ['Thaw','Perestroika','Collapse'].includes(congress.era);
 
+    const isBrezh = ['Brezhnev','Stagnation','Late Brezhnev'].includes(congress.era);
+
     let econEffect = '';
     if (isAuth && gameState.factionEcon < 25) {
       econEffect = '<span style="color:#ff4444;">⚠ Too leftist for this era: −5% survival</span>';
     } else if (isAuth && gameState.factionEcon > 60) {
       econEffect = '<span style="color:#44ff44;">Aligned with leadership: safe position</span>';
+    } else if (isReform && gameState.factionEcon < 25) {
+      econEffect = '<span style="color:#ff4444;">⚠ Too statist under reforms: −' + (isTransition ? '6' : '3') + '% survival</span>';
     } else if (isReform && gameState.factionEcon > 75) {
       econEffect = '<span style="color:#44ff44;">Market-friendly stance helps under reforms</span>';
-    } else if (isReform && gameState.factionEcon < 30) {
-      econEffect = '<span style="color:#ffcc44;">Economic conservatism may draw criticism</span>';
+    } else if (isBrezh && gameState.factionEcon > 75) {
+      econEffect = '<span style="color:#ffcc44;">Too market-oriented for Brezhnev era: −3% survival</span>';
     } else {
       econEffect = '<span style="color:#6a5a3a;">No strong effect this era</span>';
     }
 
+    const isTransition = ['Thaw','Perestroika'].includes(congress.era);
     let policyEffect = '';
     if (isAuth && gameState.factionPolicy < 25) {
       policyEffect = '<span style="color:#ff4444;">⚠ Too dovish for this era: −3% survival</span>';
+    } else if (isAuth && gameState.factionPolicy > 80) {
+      policyEffect = '<span style="color:#ffcc44;">Overcommitted hawk: −2% survival</span>';
     } else if (isAuth && gameState.factionPolicy > 60) {
       policyEffect = '<span style="color:#44ff44;">Hardline stance valued under authoritarian rule</span>';
     } else if (isReform && gameState.factionPolicy > 80) {
-      policyEffect = '<span style="color:#ff4444;">⚠ Too hawkish for reform era: −5% survival</span>';
+      policyEffect = '<span style="color:#ff4444;">⚠ Too hawkish for reform era: −' + (isTransition ? '10' : '5') + '% survival</span>';
     } else if (isReform && gameState.factionPolicy < 40) {
       policyEffect = '<span style="color:#44ff44;">Reform-minded stance is an asset now</span>';
     } else {
@@ -2508,6 +2615,33 @@ function makeChoice(choiceIndex) {
   // Apply faction shifts
   applyFactionShift(choice);
 
+  // === ORTHODOXY ACCUMULATOR ===
+  // Loyalty-boosting choices in authoritarian eras build "orthodoxy" — a hidden record
+  // of ideological commitment that becomes dangerous when the political winds change.
+  const orthoAuthEras = ['Stalin consolidating','Collectivization','Pre-Terror','Post-Terror','Late Stalin'];
+  const orthoReformEras = ['Thaw','Khrushchev','Perestroika','Collapse'];
+  if (orthoAuthEras.includes(congress.era)) {
+    if (loyaltyDelta > 0) {
+      gameState.orthodoxy = clamp(gameState.orthodoxy + loyaltyDelta * 0.5, 0, 100);
+    }
+    // Big loyalty commitments create political baggage records
+    if (loyaltyDelta >= 8) {
+      gameState.politicalBaggage.push({
+        era: congress.era, year: congress.year,
+        description: `Demonstrated fervent loyalty at the ${congress.name}`,
+        severity: loyaltyDelta >= 12 ? 'high' : 'medium'
+      });
+    }
+  }
+  // Reputation gains (reform-minded, independent thinking) slowly erode orthodoxy
+  if (repDelta > 0) {
+    gameState.orthodoxy = clamp(gameState.orthodoxy - repDelta * 0.2, 0, 100);
+  }
+  // Orthodoxy decays slowly in non-authoritarian eras (people forget, records gather dust)
+  if (!orthoAuthEras.includes(congress.era)) {
+    gameState.orthodoxy = clamp(gameState.orthodoxy - 1, 0, 100);
+  }
+
   // Track decision for biography
   gameState.decisions.push({
     congress: congress.name, year: congress.year, era: congress.era,
@@ -2565,22 +2699,56 @@ function makeChoice(choiceIndex) {
   // CUNNING
   survivalChance += (gameState.cunning - 50) * 0.004;
 
-  // LOYALTY (era-dependent)
+  // LOYALTY (era-dependent) — with harsher requirements in Stalin eras
   const authoritarianEras = ['Stalin consolidating','Collectivization','Pre-Terror','Post-Terror','Late Stalin'];
   const reformEras = ['Thaw','Perestroika','Collapse'];
+  const terrorEras = ['Pre-Terror','Post-Terror'];
   if (authoritarianEras.includes(congress.era)) {
-    survivalChance += (gameState.loyalty - 50) * 0.004;
-    if (gameState.loyalty < 30) {
-      survivalChance -= 0.15;
+    survivalChance += (gameState.loyalty - 50) * 0.005; // was 0.004
+    if (gameState.loyalty < 20) {
+      survivalChance -= 0.35;
+      gameState.log.push({text: `Your disloyalty is suicidal. The NKVD will come for you.`, important: true});
+    } else if (gameState.loyalty < 40) {
+      survivalChance -= 0.25;
       gameState.log.push({text: `Your insufficient loyalty draws suspicion from the security organs.`, important: true});
+    }
+    // Terror eras demand even higher loyalty
+    if (terrorEras.includes(congress.era) && gameState.loyalty < 60) {
+      survivalChance -= 0.10;
+      gameState.log.push({text: `In the Terror, even moderate loyalty is not enough. Only fanatics feel safe.`, important: true});
     }
   } else if (reformEras.includes(congress.era)) {
     if (gameState.loyalty > 80) {
-      survivalChance -= 0.05;
+      survivalChance -= 0.08; // was -0.05
       gameState.log.push({text: `Your rigid orthodoxy puts you at odds with the reformers.`, important: false});
     }
   } else {
     survivalChance += (gameState.loyalty - 50) * 0.002;
+  }
+
+  // ORTHODOXY SCORE (accumulated ideological baggage)
+  // In authoritarian eras, orthodoxy is rewarded; in reform eras, it's deadly
+  if (authoritarianEras.includes(congress.era)) {
+    survivalChance += gameState.orthodoxy * 0.003;
+  } else if (congress.era === 'Thaw') {
+    survivalChance -= gameState.orthodoxy * 0.003;
+    if (gameState.orthodoxy > 50) {
+      gameState.log.push({text: `De-Stalinization threatens those who were most loyal to the old regime. Your orthodox record is a liability.`, important: true});
+    }
+  } else if (congress.era === 'Khrushchev') {
+    survivalChance -= gameState.orthodoxy * 0.002;
+  } else if (['Brezhnev','Stagnation','Late Brezhnev'].includes(congress.era)) {
+    survivalChance -= gameState.orthodoxy * 0.001;
+  } else if (congress.era === 'Perestroika') {
+    survivalChance -= gameState.orthodoxy * 0.004;
+    if (gameState.orthodoxy > 40) {
+      gameState.log.push({text: `Glasnost exposes the crimes of the past. Your orthodox commitments come back to haunt you.`, important: true});
+    }
+  } else if (congress.era === 'Collapse') {
+    survivalChance -= gameState.orthodoxy * 0.005;
+    if (gameState.orthodoxy > 30) {
+      gameState.log.push({text: `The Party is dying. Those most identified with its worst excesses have nowhere to hide.`, important: true});
+    }
   }
 
   // REPUTATION
@@ -2596,6 +2764,8 @@ function makeChoice(choiceIndex) {
 
   // FACTION ALIGNMENT BONUS/PENALTY
   // Being too far left during Stalin's consolidation, or too right during reform, is dangerous
+  const isTransitionEra = ['Thaw','Perestroika'].includes(congress.era);
+  const factionPenaltyMultiplier = isTransitionEra ? 2.0 : 1.0; // transition eras double faction penalties
   if (authoritarianEras.includes(congress.era)) {
     if (gameState.factionEcon < 25) { // Too leftist after Stalin wins
       survivalChance -= 0.05;
@@ -2603,9 +2773,21 @@ function makeChoice(choiceIndex) {
     if (gameState.factionPolicy < 25) { // Too dovish under Stalin
       survivalChance -= 0.03;
     }
+    if (gameState.factionPolicy > 80) { // Too hawkish (overcommitted, seen as rival)
+      survivalChance -= 0.02;
+    }
   } else if (reformEras.includes(congress.era)) {
     if (gameState.factionPolicy > 80) { // Too hawkish under reforms
-      survivalChance -= 0.05;
+      survivalChance -= 0.05 * factionPenaltyMultiplier;
+    }
+    if (gameState.factionEcon < 25) { // Too statist under reform
+      survivalChance -= 0.03 * factionPenaltyMultiplier;
+    }
+  }
+  // Brezhnev era: too rightist is suspicious
+  if (['Brezhnev','Stagnation','Late Brezhnev'].includes(congress.era)) {
+    if (gameState.factionEcon > 75) {
+      survivalChance -= 0.03;
     }
   }
 
@@ -2721,6 +2903,7 @@ function generateBiography() {
   }
 
   // Multi-stat achievements (very hard)
+  const L = gameState.loyalty, C = gameState.cunning, R = gameState.reputation;
   if (L >= 75 && C >= 70 && R >= 60) {
     earned.push({icon: '♠', title: 'The Complete Apparatchik', desc: 'Ended with Loyalty 75+, Cunning 70+, Reputation 60+ simultaneously — the perfect Soviet politician'});
   }
@@ -2820,7 +3003,7 @@ function generateBiography() {
   // ====== ARCHETYPE (based on achievements and stats) ======
   let archetype = '';
   let historicalParallel = '';
-  const L = gameState.loyalty, C = gameState.cunning, R = gameState.reputation;
+  // L, C, R already declared above
   if (L >= 65 && C >= 55) { archetype = 'The Apparatchik'; historicalParallel = 'Like Kaganovich, you mastered the party machine and survived through institutional loyalty.'; }
   else if (gameState.betrayalCount >= 3 && C >= 60) { archetype = 'The Judas'; historicalParallel = 'Like Beria, you rose by betraying those who trusted you. Everyone feared you, and no one mourned you.'; }
   else if (L >= 70 && R < 40) { archetype = 'The Yes-Man'; historicalParallel = 'Like Voroshilov, you survived by never contradicting the boss.'; }
@@ -2849,16 +3032,70 @@ function generateBiography() {
   // Stats summary
   bio += `<p style="font-size:0.9em; color:#8a7a5a;">Final: Loyalty ${L} | Cunning ${C} | Reputation ${R}</p>`;
 
-  // Achievements grid
+  // Achievements grid with CK2-style badges
+  const badgeMap = {
+    'Survivor of the Soviet Century': 'survivor-of-soviet-century',
+    'Old Guard': 'old-guard',
+    'Old Bolshevik': 'old-bolshevik',
+    'Entrenched': 'entrenched',
+    'Flash in the Pan': 'flash-in-the-pan',
+    'Fanatical Devotion': 'fanatical-devotion',
+    'True Believer': 'true-believer',
+    'Kremlin Grandmaster': 'kremlin-grandmaster',
+    'Master Intriguer': 'master-intriguer',
+    'Legend of the Revolution': 'legend-of-revolution',
+    "People's Hero": 'peoples-hero',
+    'The Complete Apparatchik': 'complete-apparatchik',
+    'The Double Agent': 'double-agent',
+    'The Honest Servant': 'honest-servant',
+    'Enemy of the People': 'enemy-of-the-people',
+    'Political Nonentity': 'political-nonentity',
+    'Architect of Purges': 'architect-of-purges',
+    'Judas of the Presidium': 'judas-of-presidium',
+    'Loyal Comrade': 'loyal-comrade',
+    'Master of Networks': 'master-of-networks',
+    'Network Builder': 'network-builder',
+    'Lone Wolf': 'lone-wolf',
+    'Revolutionary Daredevil': 'revolutionary-daredevil',
+    'Gambler': 'gambler',
+    'The Cautious': 'the-cautious',
+    'Unbreakable': 'unbreakable',
+    'Crisis Veteran': 'crisis-veteran',
+    'Spymaster': 'spymaster',
+    'Dossier Survivor': 'dossier-survivor',
+    'Thread of History': 'thread-of-history',
+    'Long Memory': 'long-memory',
+    'The Turncoat': 'the-turncoat',
+    'Alpha and Omega': 'alpha-and-omega',
+    'Survived the Terror': 'survived-the-terror',
+    'Witnessed the Fall': 'witnessed-the-fall',
+    'Eternal Commissar': 'eternal-commissar',
+    'Ultra-Left': 'ultra-left',
+    'Left Deviationist': 'left-deviationist',
+    'Closet Capitalist': 'closet-capitalist',
+    'Right Deviationist': 'right-deviationist',
+    'Iron Fist': 'iron-fist',
+    'Radical Reformer': 'radical-reformer',
+    'Blind Survivor': 'blind-survivor',
+    'Instinct': 'instinct',
+    'Speed Survivor': 'speed-survivor',
+  };
   if (earned.length > 0) {
     bio += `<div style="margin: 15px 0;">`;
     bio += `<h4 style="color:#ffd700; font-family:'Special Elite',cursive; margin-bottom:10px;">Achievements Earned (${earned.length})</h4>`;
-    bio += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">`;
+    bio += `<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">`;
     earned.forEach(a => {
-      bio += `<div style="background:rgba(30,15,10,0.8); border:1px solid #3a2a1a; border-left:3px solid #ffd700; padding:8px 10px;">`;
-      bio += `<div style="color:#ffd700; font-size:1.1em;">${a.icon} ${a.title}</div>`;
-      bio += `<div style="color:#8a7a5a; font-size:0.8em; margin-top:3px;">${a.desc}</div>`;
-      bio += `</div>`;
+      const badgeFile = badgeMap[a.title];
+      const badgeImg = badgeFile
+        ? `<img src="images/badges/${badgeFile}.png" style="width:64px;height:64px;border:2px solid #5a4a2a;border-radius:4px;image-rendering:auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+        : '';
+      const fallbackIcon = `<div style="width:64px;height:64px;background:rgba(20,10,5,0.9);border:2px solid #5a4a2a;border-radius:4px;display:${badgeFile ? 'none' : 'flex'};align-items:center;justify-content:center;font-size:1.8em;">${a.icon}</div>`;
+      bio += `<div style="background:rgba(30,15,10,0.8); border:1px solid #3a2a1a; border-radius:6px; padding:10px; display:flex; gap:10px; align-items:center;">`;
+      bio += `<div style="flex-shrink:0;">${badgeImg}${fallbackIcon}</div>`;
+      bio += `<div style="flex:1;min-width:0;">`;
+      bio += `<div style="color:#ffd700; font-size:1em; font-family:'Special Elite',cursive;">${a.title}</div>`;
+      bio += `<div style="color:#8a7a5a; font-size:0.78em; margin-top:3px; line-height:1.3;">${a.desc}</div>`;
+      bio += `</div></div>`;
     });
     bio += `</div></div>`;
   }
