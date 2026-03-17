@@ -710,6 +710,127 @@
     color: #ff4444;
   }
 
+  /* ===== POLITBURO TRACKER ===== */
+  .politburo-tracker {
+    background: rgba(30, 15, 10, 0.8);
+    border: 1px solid #3a2a1a;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+  }
+  .politburo-tracker h4 {
+    color: #c41e1e;
+    font-family: 'Special Elite', cursive;
+    font-size: 0.95em;
+    margin-bottom: 10px;
+  }
+  .tracker-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+  .tracker-member {
+    position: relative;
+    width: 52px;
+    text-align: center;
+    transition: opacity 0.5s;
+  }
+  .tracker-member .tracker-portrait {
+    width: 44px;
+    height: 50px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    border: 2px solid #5a3a2a;
+    object-fit: cover;
+    background: #2a1a0a;
+  }
+  .tracker-member .tracker-name {
+    font-size: 0.55em;
+    color: #8a7a5a;
+    margin-top: 2px;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 52px;
+  }
+  .tracker-member.purged {
+    opacity: 0.4;
+  }
+  .tracker-member.purged .tracker-portrait {
+    border-color: #ff4444;
+    filter: grayscale(100%) brightness(0.5);
+  }
+  .tracker-member.purged .tracker-name {
+    color: #ff4444;
+    text-decoration: line-through;
+  }
+  .tracker-member.purged::after {
+    content: '✕';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ff4444;
+    font-size: 1.6em;
+    font-weight: bold;
+    text-shadow: 0 0 4px rgba(0,0,0,0.8);
+    pointer-events: none;
+  }
+  .tracker-member.new-member .tracker-portrait {
+    border-color: #44ff44;
+    box-shadow: 0 0 6px rgba(68, 255, 68, 0.3);
+  }
+  .tracker-member.new-member .tracker-name {
+    color: #44ff44;
+  }
+  .tracker-member.is-player .tracker-portrait {
+    border-color: #ffd700;
+    box-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
+  }
+  .tracker-member.is-player .tracker-name {
+    color: #ffd700;
+    font-weight: bold;
+  }
+  .tracker-legend {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: 0.7em;
+    color: #6a5a3a;
+  }
+  .tracker-legend span::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 3px;
+    vertical-align: middle;
+    border-radius: 50%;
+  }
+  .tracker-legend .legend-new::before { background: #44ff44; }
+  .tracker-legend .legend-purged::before { background: #ff4444; }
+  .tracker-legend .legend-player::before { background: #ffd700; }
+  .tracker-legend .legend-continuing::before { background: #5a3a2a; }
+
+  /* ===== CONTINUITY BONUS CHOICE ===== */
+  .choice-btn.bonus-choice {
+    border-color: #ffd700;
+    border-width: 2px;
+    background: rgba(255, 215, 0, 0.05);
+  }
+  .choice-btn.bonus-choice:hover {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: #ffd700;
+  }
+  .choice-btn.bonus-choice .choice-origin {
+    display: block;
+    font-size: 0.75em;
+    color: #ffd700;
+    margin-top: 4px;
+    font-style: italic;
+  }
+
   /* Music controls */
   .music-toggle {
     position: fixed;
@@ -770,6 +891,7 @@
 <script src="scenarios3b.js"></script>
 <script src="crisis-events.js"></script>
 <script src="dossier-events.js"></script>
+<script src="continuity.js"></script>
 <script src="music.js"></script>
 <script>
 // ============================================================
@@ -1249,6 +1371,9 @@ let gameState = {
   speedRunChoiceTime: 15, // seconds per choice
   // Scenario lock
   scenarioCongressNum: null,
+  // Continuity system
+  continuityTags: [],     // tags earned from past choices
+  previousMembers: [],    // member names at previous congress (for tracker delta)
   // Achievement tracking
   achievements: [],
   betrayalCount: 0,
@@ -1663,6 +1788,10 @@ function makeDossierChoice(index) {
 }
 
 function proceedToNextCongress() {
+  // Store current members for tracker delta on next congress
+  const currentCongress = congresses[gameState.congressIndex];
+  gameState.previousMembers = getMembersAtCongress(currentCongress).map(m => m.n);
+
   gameState.congressIndex++;
 
   if (gameState.congressIndex >= congresses.length) {
@@ -1795,10 +1924,6 @@ function renderModeSelect(area) {
         <h4>&#9760; Iron Curtain Mode</h4>
         <div class="mode-desc">No stat visibility. No survival percentages. You navigate blind, just like real Politburo members. Only your instincts guide you.</div>
       </div>
-      <div class="mode-option ${gameState.mode === 'great_purge' ? 'selected' : ''}" onclick="selectMode('great_purge')">
-        <h4>&#9876; Great Purge Challenge</h4>
-        <div class="mode-desc">Start at the 15th Congress (1927). You play as a character who was historically purged. Can you defy fate and change history?</div>
-      </div>
       <div class="mode-option ${gameState.mode === 'speed_run' ? 'selected' : ''}" onclick="selectMode('speed_run')">
         <h4>&#9201; Speed Run</h4>
         <div class="mode-desc">15 seconds per decision. Hesitate and the Party decides for you — randomly and often badly. Quick thinking is survival.</div>
@@ -1826,23 +1951,37 @@ function renderSelect(area) {
   let chars;
   let narrativeText;
 
-  if (gameState.mode === 'great_purge') {
-    // Great Purge: only characters who were executed
-    const purged = getEligibleStartCharacters().filter(m => m.fate === 'E' || m.fate === 'S');
-    const shuffled = [...purged].sort(() => Math.random() - 0.5);
-    chars = shuffled.slice(0, 4);
-    narrativeText = `<p><strong>Great Purge Challenge:</strong> These comrades were all historically purged or driven to suicide. The forces of history conspire against them. Can you rewrite their story?</p>
-      <p class="historical-note">You will begin at the 15th Congress (1927) as Stalin consolidates power. Survival odds are stacked against you.</p>`;
-  } else {
-    chars = getRandomCharacters(4);
-    narrativeText = `<p>Four comrades have been nominated for the Politburo. Choose wisely\u2014their historical fate will shape your challenge. Can you change history, or will you meet the same end?</p>
-      <p class="historical-note">Your character's real historical fate determines the difficulty. Choosing someone who was executed means the political currents are against you. Choosing a survivor means you have history on your side\u2014but one wrong choice can still doom you.</p>`;
-  }
+  chars = getRandomCharacters(4);
+  narrativeText = `<p>Four comrades have been nominated for the Politburo. Choose wisely\u2014their historical fate will shape your challenge. Can you change history, or will you meet the same end?</p>
+    <p class="historical-note">Difficulty is based on each character's real historical fate. Those who were executed or assassinated face steeper odds as history works against them.</p>`;
   gameState.selectOptions = chars;
 
   let charHtml = chars.map((c, i) => {
     const lastStint = c.s[c.s.length - 1];
     const endYear = Math.floor(lastStint.b);
+    // Difficulty rating based on fate and lifespan
+    let difficulty, diffColor, diffLabel;
+    if (c.fate === 'E') {
+      difficulty = 'Hard';
+      diffColor = '#ff4444';
+      diffLabel = '★★★ HARD — Historically executed. The system will turn against you.';
+    } else if (c.fate === 'A') {
+      difficulty = 'Hard';
+      diffColor = '#ff4444';
+      diffLabel = '★★★ HARD — Historically assassinated. A dangerous path.';
+    } else if (c.fate === 'S') {
+      difficulty = 'Hard';
+      diffColor = '#ff8844';
+      diffLabel = '★★★ HARD — Driven to suicide by political pressure.';
+    } else if (c.died && c.died < 1960) {
+      difficulty = 'Medium';
+      diffColor = '#ffcc44';
+      diffLabel = '★★☆ MEDIUM — Died before the Khrushchev era. You\'ll need cunning.';
+    } else {
+      difficulty = 'Easy';
+      diffColor = '#44ff44';
+      diffLabel = '★☆☆ EASY — A natural survivor. History is on your side.';
+    }
     return `
       <div class="char-option" onclick="selectCharacter(${i})">
         <div id="portrait-select-${i}" class="portrait-wrapper"></div>
@@ -1851,7 +1990,8 @@ function renderSelect(area) {
           ${c.nat} &bull; Born ${c.born}<br>
           Politburo ${Math.floor(c.s[0].a)}\u2013${endYear}
         </div>
-        <div class="char-fate ${fateClass(c)}">${fateDescription(c)}</div>
+        <div style="margin-top:6px;font-size:0.85em;color:${diffColor};font-family:'Special Elite',cursive;">${diffLabel}</div>
+        <div class="char-fate ${fateClass(c)}" style="font-size:0.8em;margin-top:4px;">${fateDescription(c)}</div>
       </div>
     `;
   }).join('');
@@ -1872,7 +2012,7 @@ function renderCongress(area) {
 
   // Only pick scenario once per congress — re-renders (e.g. from alliance clicks) keep the same scenario
   if (!gameState.currentScenario || gameState.scenarioCongressNum !== congress.num) {
-    const crisisChance = gameState.mode === 'great_purge' ? 0.15 : 0.10;
+    const crisisChance = 0.10;
     let isCrisis = false;
     let crisisEvent = null;
     if (!gameState.crisisThisCongress && Math.random() < crisisChance && typeof crisisEvents !== 'undefined') {
@@ -1938,15 +2078,48 @@ function renderCongress(area) {
   if (!isIronCurtain) {
     const econLabel = getFactionLabel(gameState.factionEcon, 'Leftist', 'Rightist');
     const policyLabel = getFactionLabel(gameState.factionPolicy, 'Dove', 'Hawk');
+
+    // Calculate and display current faction effects
+    const isAuth = ['Stalin consolidating','Collectivization','Pre-Terror','Post-Terror','Late Stalin'].includes(congress.era);
+    const isReform = ['Thaw','Perestroika','Collapse'].includes(congress.era);
+
+    let econEffect = '';
+    if (isAuth && gameState.factionEcon < 25) {
+      econEffect = '<span style="color:#ff4444;">⚠ Too leftist for this era: −5% survival</span>';
+    } else if (isAuth && gameState.factionEcon > 60) {
+      econEffect = '<span style="color:#44ff44;">Aligned with leadership: safe position</span>';
+    } else if (isReform && gameState.factionEcon > 75) {
+      econEffect = '<span style="color:#44ff44;">Market-friendly stance helps under reforms</span>';
+    } else if (isReform && gameState.factionEcon < 30) {
+      econEffect = '<span style="color:#ffcc44;">Economic conservatism may draw criticism</span>';
+    } else {
+      econEffect = '<span style="color:#6a5a3a;">No strong effect this era</span>';
+    }
+
+    let policyEffect = '';
+    if (isAuth && gameState.factionPolicy < 25) {
+      policyEffect = '<span style="color:#ff4444;">⚠ Too dovish for this era: −3% survival</span>';
+    } else if (isAuth && gameState.factionPolicy > 60) {
+      policyEffect = '<span style="color:#44ff44;">Hardline stance valued under authoritarian rule</span>';
+    } else if (isReform && gameState.factionPolicy > 80) {
+      policyEffect = '<span style="color:#ff4444;">⚠ Too hawkish for reform era: −5% survival</span>';
+    } else if (isReform && gameState.factionPolicy < 40) {
+      policyEffect = '<span style="color:#44ff44;">Reform-minded stance is an asset now</span>';
+    } else {
+      policyEffect = '<span style="color:#6a5a3a;">No strong effect this era</span>';
+    }
+
     factionHtml = `
       <div class="faction-tracks">
         <div class="faction-track">
           <div class="faction-track-label"><span>Left</span><span>${econLabel}</span><span>Right</span></div>
           <div class="faction-track-bar"><div class="faction-track-marker" style="left:${gameState.factionEcon}%"></div></div>
+          <div style="font-size:0.7em;margin-top:4px;">${econEffect}</div>
         </div>
         <div class="faction-track">
           <div class="faction-track-label"><span>Dove</span><span>${policyLabel}</span><span>Hawk</span></div>
           <div class="faction-track-bar"><div class="faction-track-marker" style="left:${gameState.factionPolicy}%"></div></div>
+          <div style="font-size:0.7em;margin-top:4px;">${policyEffect}</div>
         </div>
       </div>
     `;
@@ -1998,11 +2171,81 @@ function renderCongress(area) {
     `;
   }
 
+  // ===== POLITBURO TRACKER =====
+  const allCurrentMembers = getMembersAtCongress(congress);
+  const currentMemberNames = allCurrentMembers.map(m => m.n);
+  const prevNames = gameState.previousMembers || [];
+  const newNames = currentMemberNames.filter(n => !prevNames.includes(n));
+  const purgedNames = prevNames.filter(n => !currentMemberNames.includes(n));
+
+  let trackerHtml = '';
+  if (gameState.congressIndex > 0 || prevNames.length > 0) {
+    // Build list: current members + purged members from last congress
+    const trackerEntries = [];
+    // Current members
+    allCurrentMembers.forEach(m => {
+      trackerEntries.push({
+        name: m.n,
+        status: newNames.includes(m.n) ? 'new' : 'continuing',
+        isPlayer: m.n === gameState.character.n,
+        member: m
+      });
+    });
+    // Purged members (from previous congress, no longer present)
+    purgedNames.forEach(pn => {
+      const pm = pbMembers.find(m => m.n === pn);
+      if (pm) {
+        trackerEntries.push({ name: pn, status: 'purged', isPlayer: false, member: pm });
+      }
+    });
+
+    const trackerCards = trackerEntries.map(e => {
+      const key = getPortraitKey(e.member);
+      const hasImg = portraitImages.has(key);
+      const cls = e.status === 'purged' ? 'purged' : (e.status === 'new' ? 'new-member' : '');
+      const playerCls = e.isPlayer ? ' is-player' : '';
+      const imgHtml = hasImg
+        ? `<img class="tracker-portrait" src="images/portraits/${key}.png" onerror="this.style.background='#3a2a1a'">`
+        : `<div class="tracker-portrait" style="display:flex;align-items:center;justify-content:center;font-size:0.6em;color:#6a5a3a;">${e.name.charAt(0)}</div>`;
+      return `<div class="tracker-member ${cls}${playerCls}" title="${e.name}${e.status === 'purged' ? ' (removed)' : e.status === 'new' ? ' (new)' : ''}">
+        ${imgHtml}
+        <div class="tracker-name">${e.name}</div>
+      </div>`;
+    }).join('');
+
+    const purgeNote = purgedNames.length > 0
+      ? `<div style="font-size:0.75em;color:#ff6666;margin-top:6px;">Removed since last Congress: ${purgedNames.join(', ')}</div>`
+      : '';
+    const newNote = newNames.length > 0
+      ? `<div style="font-size:0.75em;color:#44ff44;margin-top:4px;">New members: ${newNames.join(', ')}</div>`
+      : '';
+
+    trackerHtml = `
+      <div class="politburo-tracker">
+        <h4>☭ Politburo Composition (${allCurrentMembers.length} members)</h4>
+        <div class="tracker-grid">${trackerCards}</div>
+        <div class="tracker-legend">
+          <span class="legend-player">You</span>
+          <span class="legend-new">New</span>
+          <span class="legend-purged">Removed</span>
+          <span class="legend-continuing">Continuing</span>
+        </div>
+        ${purgeNote}${newNote}
+      </div>
+    `;
+  }
+
   // Notable colleagues
   const colleagues = getMembersAtCongress(congress).filter(m => m.n !== gameState.character.n).slice(0, 8);
   let colleagueList = colleagues.map(c => {
-    return `<span style="color:${c.fate === 'E' ? '#ff6666' : c.fate === 'S' ? '#ffaa44' : '#aaa'}">${c.n}</span>`;
+    let color, titleTip;
+    if (c.fate === 'E') { color = '#ff6666'; titleTip = 'Historically executed'; }
+    else if (c.fate === 'A') { color = '#ff44ff'; titleTip = 'Historically assassinated'; }
+    else if (c.fate === 'S') { color = '#ffaa44'; titleTip = 'Historically driven to suicide'; }
+    else { color = '#aaa'; titleTip = 'Died of natural causes'; }
+    return `<span style="color:${color};cursor:help;border-bottom:1px dotted ${color};" title="${titleTip} (${c.born}–${c.died || '?'})">${c.n}</span>`;
   }).join(', ');
+  const colleagueLegend = `<span style="font-size:0.75em;display:block;margin-top:4px;color:#6a5a3a;">Color key: <span style="color:#aaa;">natural death</span> · <span style="color:#ff6666;">executed</span> · <span style="color:#ffaa44;">suicide</span> · <span style="color:#ff44ff;">assassinated</span></span>`;
 
   let narrativeHtml = '';
   let choicesHtml = '';
@@ -2013,14 +2256,32 @@ function renderCongress(area) {
   if (currentScenario) {
     narrativeHtml = `
       <p>${currentScenario.text}</p>
-      <p class="historical-note">Fellow Politburo members at this Congress: ${colleagueList}</p>
+      <p class="historical-note">Fellow Politburo members at this Congress: ${colleagueList}${colleagueLegend}</p>
     `;
     const choices = currentScenario.choices || [];
+    // Get continuity bonus choices
+    let bonusChoices = [];
+    if (typeof getContinuityBonuses === 'function' && gameState.continuityTags.length > 0) {
+      bonusChoices = getContinuityBonuses(congress.num, gameState.continuityTags);
+    }
+    // Store bonus choices on scenario so makeChoice can access them
+    currentScenario._bonusChoices = bonusChoices;
+    const totalChoices = choices.length;
     choicesHtml = choices.map((choice, i) => `
       <button class="choice-btn" onclick="makeChoice(${i})" id="choice-btn-${i}">
         <span class="choice-label">${String.fromCharCode(65 + i)}.</span> ${choice.text}
       </button>
     `).join('');
+    // Add bonus choices from continuity system
+    bonusChoices.forEach((bc, bi) => {
+      const idx = totalChoices + bi;
+      choicesHtml += `
+        <button class="choice-btn bonus-choice" onclick="makeChoice(${idx})" id="choice-btn-${idx}">
+          <span class="choice-label" style="color:#ffd700;">★</span> ${bc.text}
+          <span class="choice-origin">↳ Unlocked by: ${bc.origin}</span>
+        </button>
+      `;
+    });
   } else {
     narrativeHtml = `<p>${congress.desc}</p><p>The Congress proceeds without major incident for you personally.</p>`;
     choicesHtml = `<button class="choice-btn" onclick="advanceCongress()"><span class="choice-label">&#9733;</span> Continue to the next Congress</button>`;
@@ -2051,6 +2312,7 @@ function renderCongress(area) {
     ${factionHtml}
     ${charCard}
     ${!isIronCurtain ? allianceHtml : ''}
+    ${trackerHtml}
     <div id="narrative" class="typewriter">${narrativeHtml}</div>
     <div id="choices">${choicesHtml}</div>
     ${gameState.log.length > 0 ? `<div class="event-log">${gameState.log.slice(-8).map(l => `<p class="${l.important ? 'important' : ''}">${l.text}</p>`).join('')}</div>` : ''}
@@ -2143,13 +2405,7 @@ function selectCharacter(index) {
   const char = gameState.selectOptions[index];
   gameState.character = char;
 
-  // Great Purge mode starts at 15th Congress (index 8, 1927)
-  if (gameState.mode === 'great_purge') {
-    gameState.congressIndex = congresses.findIndex(c => c.num === 15);
-    if (gameState.congressIndex < 0) gameState.congressIndex = 8;
-  } else {
-    gameState.congressIndex = findFirstCongress(char);
-  }
+  gameState.congressIndex = findFirstCongress(char);
 
   gameState.loyalty = 50;
   gameState.cunning = 50;
@@ -2167,16 +2423,14 @@ function selectCharacter(index) {
     gameState.speedRunStart = Date.now();
   }
 
-  // Initialize alliances
+  // Initialize alliances and tracker
   const firstCongress = congresses[gameState.congressIndex];
   initAlliances(firstCongress);
+  gameState.previousMembers = []; // No previous congress to compare
 
   gameState.log.push({text: `You are ${char.n}, ${char.nat}, born ${char.born}. Your journey through Soviet politics begins.`, important: true});
   if (gameState.mode === 'iron_curtain') {
     gameState.log.push({text: `Iron Curtain Mode: Stats are hidden. Trust your instincts.`, important: true});
-  }
-  if (gameState.mode === 'great_purge') {
-    gameState.log.push({text: `Great Purge Challenge: History has condemned you. Can you rewrite your fate?`, important: true});
   }
   if (gameState.mode === 'speed_run') {
     gameState.log.push({text: `Speed Run: ${gameState.speedRunChoiceTime} seconds per decision. Hesitate and the Party decides for you!`, important: true});
@@ -2190,7 +2444,11 @@ function makeChoice(choiceIndex) {
 
   const congress = congresses[gameState.congressIndex];
   const scenario = gameState.currentScenario;
-  const choice = scenario.choices[choiceIndex];
+  const normalChoices = scenario.choices || [];
+  const bonusChoices = scenario._bonusChoices || [];
+  const choice = choiceIndex < normalChoices.length
+    ? normalChoices[choiceIndex]
+    : bonusChoices[choiceIndex - normalChoices.length];
 
   // Apply stat changes with diminishing returns and opposing-stat tension
   // Diminishing returns: gains are halved above 70, quartered above 85
@@ -2234,6 +2492,20 @@ function makeChoice(choiceIndex) {
     factionEcon: gameState.factionEcon, factionPolicy: gameState.factionPolicy,
     wasCrisis: gameState.currentIsCrisis
   });
+
+  // Tag this choice for cross-scenario continuity
+  if (typeof tagChoice === 'function') {
+    const newTags = tagChoice(choice.text);
+    newTags.forEach(t => {
+      if (!gameState.continuityTags.includes(t)) {
+        gameState.continuityTags.push(t);
+        const trigger = continuityTriggers[t];
+        if (trigger) {
+          gameState.log.push({text: `Your decision has been noted: "${trigger.description}". This may open new options in future Congresses.`, important: false});
+        }
+      }
+    });
+  }
 
   // Track achievement stats
   gameState.maxLoyalty = Math.max(gameState.maxLoyalty, gameState.loyalty);
@@ -2337,11 +2609,6 @@ function makeChoice(choiceIndex) {
     }
   }
 
-  // Great Purge mode penalty
-  if (gameState.mode === 'great_purge') {
-    survivalChance -= 0.05;
-  }
-
   if (gameState.cunning < 20) survivalChance -= 0.1;
 
   survivalChance = clamp(survivalChance, 0.05, 0.98);
@@ -2397,55 +2664,133 @@ function generateBiography() {
 
   // ====== ACHIEVEMENTS ======
   const earned = [];
+  const congressesSurvived = gameState.congressIndex;
 
-  // Survival achievements
-  if (survived) earned.push({icon: '\u2606', title: 'Survivor of the Soviet Century', desc: 'Navigated all 22 Congresses from 1918 to 1990'});
-  if (gameState.congressIndex >= 10) earned.push({icon: '\u2605', title: 'Old Bolshevik', desc: 'Survived at least 10 Congresses'});
-  if (gameState.congressIndex >= 5 && gameState.congressIndex < 10) earned.push({icon: '\u2736', title: 'Entrenched', desc: 'Survived 5+ Congresses'});
-  if (gameState.congressIndex < 3 && !survived) earned.push({icon: '\u2620', title: 'Flash in the Pan', desc: 'Purged before your third Congress'});
-
-  // Stat achievements
-  if (gameState.maxLoyalty >= 90) earned.push({icon: '\u2691', title: 'True Believer', desc: 'Reached 90+ Loyalty \u2014 the party\u2019s most devoted servant'});
-  if (gameState.maxCunning >= 85) earned.push({icon: '\u2694', title: 'Master Intriguer', desc: 'Reached 85+ Cunning \u2014 a Machiavelli of the Kremlin'});
-  if (gameState.maxReputation >= 85) earned.push({icon: '\u2606', title: 'People\u2019s Hero', desc: 'Reached 85+ Reputation \u2014 a figure of genuine stature'});
-  if (gameState.loyalty >= 70 && gameState.cunning >= 60 && gameState.reputation >= 50) {
-    earned.push({icon: '\u2660', title: 'The Complete Apparatchik', desc: 'Maintained high marks across all three stats simultaneously'});
+  // Survival achievements (mutually exclusive tiers)
+  if (survived) {
+    earned.push({icon: '☆', title: 'Survivor of the Soviet Century', desc: 'Navigated all 22 Congresses from 1918 to 1990 — one of history\'s great survivors'});
+  } else if (congressesSurvived >= 15) {
+    earned.push({icon: '★', title: 'Old Guard', desc: `Survived ${congressesSurvived} Congresses — outlasted most of your peers`});
+  } else if (congressesSurvived >= 10) {
+    earned.push({icon: '★', title: 'Old Bolshevik', desc: `Survived ${congressesSurvived} Congresses — a veteran of Soviet politics`});
+  } else if (congressesSurvived >= 5) {
+    earned.push({icon: '✶', title: 'Entrenched', desc: `Survived ${congressesSurvived} Congresses — you know how the game is played`});
+  } else if (congressesSurvived <= 1 && !survived) {
+    earned.push({icon: '☠', title: 'Flash in the Pan', desc: 'Purged at your first or second Congress — the party chews up the naive'});
   }
-  if (gameState.minLoyalty <= 15) earned.push({icon: '\u2717', title: 'Enemy of the People', desc: 'Loyalty dropped below 15 \u2014 dangerously close to counter-revolutionary'});
-  if (gameState.cunning <= 20 && gameState.congressIndex >= 5) earned.push({icon: '\u263A', title: 'The Naive', desc: 'Survived 5+ Congresses without developing political instincts'});
 
-  // Playstyle achievements
-  if (gameState.betrayalCount >= 3) earned.push({icon: '\u2620', title: 'Judas of the Presidium', desc: `Betrayed ${gameState.betrayalCount} allies \u2014 trust means nothing to you`});
-  if (gameState.betrayalCount === 0 && gameState.alliancesFormed >= 3) earned.push({icon: '\u2764', title: 'Loyal Comrade', desc: 'Never betrayed an ally'});
-  if (gameState.alliancesFormed >= 8) earned.push({icon: '\u2605', title: 'Network Builder', desc: `Formed ${gameState.alliancesFormed} alliances \u2014 a master of political connections`});
-  if (gameState.alliancesFormed === 0) earned.push({icon: '\u25CF', title: 'Lone Wolf', desc: 'Never formed a single alliance \u2014 trusted no one'});
-  if (gameState.lowSurvivalChoices >= 5) earned.push({icon: '\u2618', title: 'Gambler', desc: `Chose ${gameState.lowSurvivalChoices} high-risk options \u2014 fortune favors the bold`});
-  if (gameState.crisesSurvived >= 3) earned.push({icon: '\u26A1', title: 'Crisis Veteran', desc: `Weathered ${gameState.crisesSurvived} emergency crises`});
-  if (gameState.dossiersSurvived >= 3) earned.push({icon: '\u2709', title: 'Dossier Survivor', desc: `Navigated ${gameState.dossiersSurvived} secret intelligence encounters`});
+  // Stat achievements (higher thresholds, harder to earn)
+  if (gameState.maxLoyalty >= 95) {
+    earned.push({icon: '⚑', title: 'Fanatical Devotion', desc: 'Reached 95+ Loyalty — more devout than a Bolshevik priest'});
+  } else if (gameState.maxLoyalty >= 85) {
+    earned.push({icon: '⚑', title: 'True Believer', desc: 'Reached 85+ Loyalty — the party\'s most devoted servant'});
+  }
+  if (gameState.maxCunning >= 90) {
+    earned.push({icon: '⚔', title: 'Kremlin Grandmaster', desc: 'Reached 90+ Cunning — you could outmaneuver Machiavelli himself'});
+  } else if (gameState.maxCunning >= 80) {
+    earned.push({icon: '⚔', title: 'Master Intriguer', desc: 'Reached 80+ Cunning — the corridors of power hold no secrets from you'});
+  }
+  if (gameState.maxReputation >= 90) {
+    earned.push({icon: '☆', title: 'Legend of the Revolution', desc: 'Reached 90+ Reputation — your name is spoken with reverence'});
+  } else if (gameState.maxReputation >= 80) {
+    earned.push({icon: '☆', title: 'People\'s Hero', desc: 'Reached 80+ Reputation — a figure of genuine stature'});
+  }
 
-  // Era-specific achievements
+  // Multi-stat achievements (very hard)
+  if (L >= 75 && C >= 70 && R >= 60) {
+    earned.push({icon: '♠', title: 'The Complete Apparatchik', desc: 'Ended with Loyalty 75+, Cunning 70+, Reputation 60+ simultaneously — the perfect Soviet politician'});
+  }
+  if (L <= 20 && C >= 70) {
+    earned.push({icon: '🗡', title: 'The Double Agent', desc: 'Disloyal but brilliant — you served yourself while pretending to serve the state'});
+  }
+  if (L >= 70 && R >= 70 && C <= 35) {
+    earned.push({icon: '✧', title: 'The Honest Servant', desc: 'Loyal and respected but politically unsophisticated — a rare and endangered species'});
+  }
+
+  // Extreme stat lows
+  if (gameState.minLoyalty <= 10) earned.push({icon: '✗', title: 'Enemy of the People', desc: 'Loyalty dropped below 10 — the NKVD has a thick file on you'});
+  if (L <= 15 && C <= 15 && R <= 15) earned.push({icon: '💀', title: 'Political Nonentity', desc: 'All stats below 15 — you had nothing and no one'});
+
+  // Playstyle achievements (higher thresholds)
+  if (gameState.betrayalCount >= 5) {
+    earned.push({icon: '☠', title: 'Architect of Purges', desc: `Betrayed ${gameState.betrayalCount} allies — you made betrayal an art form`});
+  } else if (gameState.betrayalCount >= 3) {
+    earned.push({icon: '☠', title: 'Judas of the Presidium', desc: `Betrayed ${gameState.betrayalCount} allies — trust means nothing to you`});
+  }
+  if (gameState.betrayalCount === 0 && gameState.alliancesFormed >= 5) {
+    earned.push({icon: '❤', title: 'Loyal Comrade', desc: 'Formed 5+ alliances and never betrayed a single one'});
+  }
+  if (gameState.alliancesFormed >= 12) {
+    earned.push({icon: '★', title: 'Master of Networks', desc: `Formed ${gameState.alliancesFormed} alliances — your web spans the entire party`});
+  } else if (gameState.alliancesFormed >= 8) {
+    earned.push({icon: '★', title: 'Network Builder', desc: `Formed ${gameState.alliancesFormed} alliances — a skilled political connector`});
+  }
+  if (gameState.alliancesFormed === 0 && congressesSurvived >= 5) {
+    earned.push({icon: '●', title: 'Lone Wolf', desc: 'Survived 5+ Congresses without forming a single alliance'});
+  }
+  if (gameState.lowSurvivalChoices >= 8) {
+    earned.push({icon: '☘', title: 'Revolutionary Daredevil', desc: `Chose ${gameState.lowSurvivalChoices} high-risk options — you live on the edge`});
+  } else if (gameState.lowSurvivalChoices >= 5) {
+    earned.push({icon: '☘', title: 'Gambler', desc: `Chose ${gameState.lowSurvivalChoices} high-risk options — fortune favors the bold`});
+  }
+  if (gameState.lowSurvivalChoices === 0 && congressesSurvived >= 8) {
+    earned.push({icon: '🛡', title: 'The Cautious', desc: 'Never chose a high-risk option — you played it safe and lived'});
+  }
+  if (gameState.crisesSurvived >= 5) {
+    earned.push({icon: '⚡', title: 'Unbreakable', desc: `Weathered ${gameState.crisesSurvived} emergency crises — nothing shakes you`});
+  } else if (gameState.crisesSurvived >= 3) {
+    earned.push({icon: '⚡', title: 'Crisis Veteran', desc: `Weathered ${gameState.crisesSurvived} emergency crises`});
+  }
+  if (gameState.dossiersSurvived >= 4) {
+    earned.push({icon: '✉', title: 'Spymaster', desc: `Navigated ${gameState.dossiersSurvived} secret intelligence encounters — you know where the bodies are buried`});
+  } else if (gameState.dossiersSurvived >= 2) {
+    earned.push({icon: '✉', title: 'Dossier Survivor', desc: `Navigated ${gameState.dossiersSurvived} secret intelligence encounters`});
+  }
+
+  // Continuity achievements
+  const tags = gameState.continuityTags || [];
+  if (tags.length >= 8) {
+    earned.push({icon: '🔗', title: 'Thread of History', desc: `Your choices echoed across ${tags.length} different eras — a career of consistent consequences`});
+  } else if (tags.length >= 4) {
+    earned.push({icon: '🔗', title: 'Long Memory', desc: `${tags.length} of your decisions had lasting political consequences`});
+  }
+  if (tags.includes('cultivated_stalin') && tags.includes('embraced_destalinization')) {
+    earned.push({icon: '🎭', title: 'The Turncoat', desc: 'Cultivated Stalin then embraced de-Stalinization — the ultimate political survivor'});
+  }
+  if (tags.includes('backed_brest_litovsk') && tags.includes('walked_out_with_yeltsin')) {
+    earned.push({icon: '📜', title: 'Alpha and Omega', desc: 'Supported Lenin\'s first great compromise and witnessed the Party\'s final act'});
+  }
+
+  // Era-specific achievements (more specific)
   const erasVisited = [...new Set(decisions.map(d => d.era))];
-  if (erasVisited.some(e => e.includes('Stalin') || e === 'Pre-Terror' || e === 'Post-Terror')) {
-    earned.push({icon: '\u2622', title: 'Survived the Terror', desc: 'Lived through Stalin\u2019s most dangerous years'});
+  const terrorEras = ['Stalin consolidating', 'Collectivization', 'Pre-Terror', 'Post-Terror'];
+  const terrorCount = erasVisited.filter(e => terrorEras.includes(e)).length;
+  if (terrorCount >= 3) {
+    earned.push({icon: '☢', title: 'Survived the Terror', desc: 'Lived through multiple years of Stalin\'s most dangerous purge eras'});
   }
   if (erasVisited.includes('Collapse') && survived) {
-    earned.push({icon: '\u2690', title: 'Witnessed the Fall', desc: 'Saw the Soviet Union dissolve from inside the Politburo'});
+    earned.push({icon: '⚐', title: 'Witnessed the Fall', desc: 'Saw the Soviet Union dissolve from inside the Politburo'});
+  }
+  if (erasVisited.includes('Civil War') && erasVisited.includes('Collapse')) {
+    earned.push({icon: '∞', title: 'Eternal Commissar', desc: 'Present from the Civil War to the Collapse — 72 years of Soviet power'});
   }
 
-  // Faction achievements
+  // Faction achievements (more extreme thresholds)
   const econLabel = getFactionLabel(gameState.factionEcon, 'Leftist', 'Rightist');
   const policyLabel = getFactionLabel(gameState.factionPolicy, 'Dove', 'Hawk');
-  if (gameState.factionEcon < 25) earned.push({icon: '\u262D', title: 'Left Deviationist', desc: 'A committed economic leftist \u2014 state control above all'});
-  if (gameState.factionEcon > 75) earned.push({icon: '\u2696', title: 'Right Deviationist', desc: 'An advocate for market forces within socialism'});
-  if (gameState.factionPolicy > 80) earned.push({icon: '\u2694', title: 'Iron Fist', desc: 'A hardliner who believed in strength above all'});
-  if (gameState.factionPolicy < 20) earned.push({icon: '\u2698', title: 'Reformer', desc: 'A dove who pushed for peaceful solutions'});
+  if (gameState.factionEcon <= 15) earned.push({icon: '☭', title: 'Ultra-Left', desc: 'The most committed economic leftist — state control above everything'});
+  else if (gameState.factionEcon < 30) earned.push({icon: '☭', title: 'Left Deviationist', desc: 'A committed economic leftist — state control above all'});
+  if (gameState.factionEcon >= 85) earned.push({icon: '⚖', title: 'Closet Capitalist', desc: 'An extreme advocate for market forces — practically a capitalist roader'});
+  else if (gameState.factionEcon > 70) earned.push({icon: '⚖', title: 'Right Deviationist', desc: 'An advocate for market forces within socialism'});
+  if (gameState.factionPolicy >= 85) earned.push({icon: '⚔', title: 'Iron Fist', desc: 'An extreme hardliner who believed only in strength'});
+  if (gameState.factionPolicy <= 15) earned.push({icon: '⚘', title: 'Radical Reformer', desc: 'A committed dove who pushed for peaceful solutions above all'});
 
   // Mode achievements
-  if (gameState.mode === 'iron_curtain' && survived) earned.push({icon: '\u2588', title: 'Blind Survivor', desc: 'Completed the game in Iron Curtain mode without seeing stats'});
-  if (gameState.mode === 'great_purge' && survived) earned.push({icon: '\u2606', title: 'Fate Defied', desc: 'Rewrote history in Great Purge Challenge mode'});
+  if (gameState.mode === 'iron_curtain' && survived) earned.push({icon: '█', title: 'Blind Survivor', desc: 'Completed the game in Iron Curtain mode without seeing stats'});
+  if (gameState.mode === 'iron_curtain' && congressesSurvived >= 10) earned.push({icon: '▓', title: 'Instinct', desc: 'Survived 10+ Congresses blind — pure political intuition'});
   if (gameState.mode === 'speed_run' && survived) {
     const elapsed = Math.round((Date.now() - gameState.speedRunStart) / 1000);
-    earned.push({icon: '\u231A', title: 'Speed Survivor', desc: `Completed speed run in ${Math.floor(elapsed/60)}m ${elapsed%60}s`});
+    earned.push({icon: '⏚', title: 'Speed Survivor', desc: `Completed speed run in ${Math.floor(elapsed/60)}m ${elapsed%60}s`});
   }
 
   // ====== ARCHETYPE (based on achievements and stats) ======
@@ -2499,7 +2844,7 @@ function generateBiography() {
   bio += `<p class="historical-note"><em>In real history, ${char.n} ${fateDescription(char).toLowerCase()}.</em></p>`;
 
   if (gameState.mode !== 'standard') {
-    const modeNames = {iron_curtain: 'Iron Curtain', great_purge: 'Great Purge Challenge', speed_run: 'Speed Run'};
+    const modeNames = {iron_curtain: 'Iron Curtain', speed_run: 'Speed Run'};
     bio += `<p class="historical-note"><strong>Mode: ${modeNames[gameState.mode]}</strong></p>`;
   }
 
@@ -2532,6 +2877,8 @@ function restartGame() {
     speedRunStart: null,
     speedRunChoiceTime: 15,
     scenarioCongressNum: null,
+    continuityTags: [],
+    previousMembers: [],
     achievements: [],
     betrayalCount: 0,
     alliancesFormed: 0,
