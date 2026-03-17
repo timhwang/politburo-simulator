@@ -1573,111 +1573,135 @@ function generatePravda(congress, choice, survived) {
   const year = congress.year;
   const era = congress.era;
   const char = gameState.character;
+  const scenario = gameState.currentScenario;
+  const isCrisis = gameState.currentIsCrisis;
 
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const month = monthNames[Math.floor((congress.decimal % 1) * 12)];
 
-  // Era-appropriate headlines
-  const eraHeadlines = {
-    'Civil War': [
-      'RED ARMY ADVANCES ON ALL FRONTS',
-      'WORKERS UNITE AGAINST WHITE TERROR',
-      'REVOLUTION TRIUMPHANT: ENEMY IN RETREAT'
-    ],
-    'NEP': [
-      'NEW ECONOMIC POLICY BEARS FRUIT',
-      'INDUSTRIAL PRODUCTION RISES STEADILY',
-      'SOVIET TRADE AGREEMENTS EXPAND'
-    ],
-    'Succession': [
-      'PARTY UNITY STRONGER THAN EVER',
-      'LENINIST LINE PREVAILS AT CONGRESS',
-      'OPPOSITION DEVIATIONS CORRECTED'
-    ],
-    'Stalin consolidating': [
-      'GREAT LEADER GUIDES SOCIALIST CONSTRUCTION',
-      'FIVE-YEAR PLAN TARGETS EXCEEDED',
-      'ENEMIES OF THE PEOPLE UNMASKED'
-    ],
-    'Collectivization': [
-      'COLLECTIVE FARMS TRANSFORM COUNTRYSIDE',
-      'SOCIALIST AGRICULTURE MARCHES FORWARD',
-      'KULAK RESISTANCE CRUSHED BY WORKERS'
-    ],
-    'Pre-Terror': [
-      'CONGRESS OF VICTORS CELEBRATES ACHIEVEMENTS',
-      'SOCIALIST INDUSTRY REACHES NEW HEIGHTS',
-      'VIGILANCE AGAINST CLASS ENEMIES INTENSIFIES'
-    ],
-    'Post-Terror': [
-      'ENEMIES OF THE PEOPLE BROUGHT TO JUSTICE',
-      'PARTY PURGED OF TRAITORS AND SPIES',
-      'SOVIET DEFENSE CAPABILITIES STRENGTHENED'
-    ],
-    'Late Stalin': [
-      'GREAT STALIN LEADS NATION TO NEW VICTORIES',
-      'POSTWAR RECONSTRUCTION PROCEEDS AHEAD OF SCHEDULE',
-      'COSMOPOLITAN AGENTS EXPOSED AND NEUTRALIZED'
-    ],
-    'Thaw': [
-      'PARTY CORRECTS ERRORS OF THE PAST',
-      'NEW COURSE FOR SOCIALIST DEVELOPMENT',
-      'PEACEFUL COEXISTENCE POLICY ADVANCES'
-    ],
-    'Khrushchev': [
-      'SOVIET SCIENCE CONQUERS SPACE',
-      'OVERTAKING AMERICA IN PRODUCTION',
-      'COMMUNIST FUTURE WITHIN REACH'
-    ],
-    'Brezhnev': [
-      'DEVELOPED SOCIALISM ACHIEVES NEW STAGE',
-      'DÉTENTE ADVANCES CAUSE OF PEACE',
-      'FRATERNAL SOCIALIST NATIONS UNITED'
-    ],
-    'Stagnation': [
-      'STEADY PROGRESS ON ALL ECONOMIC FRONTS',
-      'PARTY LEADERSHIP ENSURES STABILITY',
-      'HELSINKI ACCORDS MARK DIPLOMATIC TRIUMPH'
-    ],
-    'Late Brezhnev': [
-      'INTERNATIONALIST DUTY FULFILLED IN AFGHANISTAN',
-      'PEACE PROGRAM CONTINUES DESPITE PROVOCATIONS',
-      'SOCIALIST ACHIEVEMENTS DEFENDED'
-    ],
-    'Perestroika': [
-      'RESTRUCTURING OPENS NEW ERA FOR SOCIALISM',
-      'GLASNOST REVEALS PATH TO RENEWAL',
-      'DEMOCRATIC REFORMS STRENGTHEN PARTY'
-    ],
-    'Collapse': [
-      'PARTY SEEKS NEW FORMS OF UNITY',
-      'UNION TREATY NEGOTIATIONS CONTINUE',
-      'REFORM PROCESS ENTERS DECISIVE PHASE'
-    ]
-  };
+  // ===== HEADLINE: Reflect the scenario topic =====
+  let mainHeadline = '';
 
-  const headlines = eraHeadlines[era] || ['PARTY CONGRESS CONCLUDES SUCCESSFULLY'];
-  const mainHeadline = headlines[Math.floor(Math.random() * headlines.length)];
-
-  // Generate subheadline based on player's action
-  let subhead = '';
-  if (choice) {
-    if (choice.loyalty > 5) subhead = `Comrade ${char.n} praised for unwavering dedication to Party line`;
-    else if (choice.reputation > 5) subhead = `Comrade ${char.n}'s speech draws attention at Congress`;
-    else if (choice.cunning > 5) subhead = `Comrade ${char.n} demonstrates skilled political leadership`;
-    else if (choice.loyalty < -5) subhead = `Questions raised about ideological direction at Congress`;
-    else subhead = `${congress.name} proceedings continue with full Party participation`;
-  } else {
-    subhead = `Delegates affirm commitment to socialist construction`;
+  // Try to generate a headline from the scenario text
+  if (scenario && scenario.text) {
+    const txt = scenario.text.toLowerCase();
+    // Match scenario topics to Pravda-style headlines
+    if (txt.includes('brest-litovsk') || txt.includes('treaty')) mainHeadline = 'PEACE SECURED: REVOLUTIONARY STATE PRESERVED';
+    else if (txt.includes('civil war') || txt.includes('red army') || txt.includes('white')) mainHeadline = 'RED ARMY VICTORIOUS ON ALL FRONTS';
+    else if (txt.includes('military specialist') || txt.includes('tsarist officer')) mainHeadline = 'RED ARMY FORGED INTO IRON INSTRUMENT OF REVOLUTION';
+    else if (txt.includes('trade union') || txt.includes('war communism') || txt.includes('labor')) mainHeadline = 'WORKERS AND PARTY UNITE FOR SOCIALIST CONSTRUCTION';
+    else if (txt.includes('kronstadt') || txt.includes('nep') || txt.includes('new economic')) mainHeadline = 'NEW ECONOMIC POLICY: TACTICAL RETREAT ENSURES ADVANCE';
+    else if (txt.includes('testament') || txt.includes('lenin.*dying') || txt.includes('georgian affair')) mainHeadline = 'PARTY UNITY PREVAILS OVER FACTIONAL INTRIGUES';
+    else if (txt.includes('succession') || txt.includes('socialism in one country') || txt.includes('permanent revolution')) mainHeadline = 'LENINIST LINE TRIUMPHS OVER OPPORTUNIST DEVIATION';
+    else if (txt.includes('new opposition') || txt.includes('zinoviev') || txt.includes('kamenev')) mainHeadline = 'OPPOSITION BLOC DECISIVELY DEFEATED AT CONGRESS';
+    else if (txt.includes('united opposition') || txt.includes('expel') || txt.includes('exile')) mainHeadline = 'TROTSKYITE-ZINOVIEVITE CONSPIRACY CRUSHED';
+    else if (txt.includes('collectiviz') || txt.includes('kulak') || txt.includes('dekulak')) mainHeadline = 'COLLECTIVE AGRICULTURE TRANSFORMS THE COUNTRYSIDE';
+    else if (txt.includes('five-year plan') || txt.includes('industrializ')) mainHeadline = 'FIVE-YEAR PLAN: SOCIALIST INDUSTRY MARCHES FORWARD';
+    else if (txt.includes('congress of victors') || txt.includes('kirov.*vote')) mainHeadline = 'CONGRESS OF VICTORS: SOCIALISM TRIUMPHANT';
+    else if (txt.includes('great terror') || txt.includes('purge') || txt.includes('ezhov')) mainHeadline = 'ENEMIES OF THE PEOPLE UNMASKED AND DESTROYED';
+    else if (txt.includes('doctors.* plot') || txt.includes('presidium.*expand')) mainHeadline = 'VIGILANCE INTENSIFIES AGAINST WRECKERS AND SABOTEURS';
+    else if (txt.includes('secret speech') || txt.includes('cult of personality') || txt.includes('denouncing stalin')) mainHeadline = 'PARTY CORRECTS ERRORS: NEW ERA OF SOCIALIST LEGALITY';
+    else if (txt.includes('anti-party group') || txt.includes('catch and surpass')) mainHeadline = 'SOVIET UNION ON PATH TO OVERTAKE CAPITALIST NATIONS';
+    else if (txt.includes('stalin.*body') || txt.includes('mausoleum') || txt.includes('communism by 1980')) mainHeadline = 'PARTY PROGRAM CHARTS COURSE TO COMMUNIST SOCIETY';
+    else if (txt.includes('khrushchev.*ousted') || txt.includes('collective leadership') || txt.includes('voluntarism')) mainHeadline = 'COLLECTIVE LEADERSHIP RESTORED: STABILITY PREVAILS';
+    else if (txt.includes('prague spring') || txt.includes('brezhnev doctrine') || txt.includes('détente')) mainHeadline = 'SOCIALIST COMMONWEALTH DEFENDS REVOLUTIONARY GAINS';
+    else if (txt.includes('helsinki') || txt.includes('stagnation') || txt.includes('gerontocracy')) mainHeadline = 'STEADY PROGRESS ON ALL FRONTS OF SOCIALIST CONSTRUCTION';
+    else if (txt.includes('afghanistan') || txt.includes('solidarity') || txt.includes('andropov')) mainHeadline = 'PARTY DISCIPLINE AND RENEWAL: THE PATH FORWARD';
+    else if (txt.includes('perestroika') || txt.includes('glasnost') || txt.includes('chernobyl')) mainHeadline = 'RESTRUCTURING: A NEW CHAPTER IN SOVIET HISTORY';
+    else if (txt.includes('berlin wall') || txt.includes('yeltsin.*resign') || txt.includes('last congress')) mainHeadline = 'PARTY CONGRESS DEBATES FUTURE OF SOVIET UNION';
+    else if (txt.includes('china') || txt.includes('sino-soviet')) mainHeadline = 'CHINESE ADVENTURISM CONDEMNED BY CONGRESS';
+    else if (txt.includes('famine') || txt.includes('grain')) mainHeadline = 'AGRICULTURAL PRODUCTION MEETS CHALLENGES HEAD-ON';
+    else if (txt.includes('corruption') || txt.includes('nepmen')) mainHeadline = 'PARTY ORGANS STRENGTHEN DISCIPLINE AND ORDER';
+    else if (txt.includes('war') && txt.includes('germany')) mainHeadline = 'SOVIET DEFENSE READINESS AT HIGHEST LEVEL';
+    else if (isCrisis && scenario.title) mainHeadline = scenario.title.toUpperCase();
   }
 
-  // Body text snippets
-  const bodySnippets = [
-    `The ${congress.name} of the Communist Party of the Soviet Union concluded its work today amid scenes of great enthusiasm.`,
-    `Delegates from all Soviet republics affirmed the correctness of the Party's general line.`,
-    `Production figures for the current period show ${Math.floor(Math.random()*15)+95}% fulfillment of planned targets.`,
-    `The Congress unanimously adopted resolutions on all matters before it.`,
-  ];
+  // Fallback: era-based headlines
+  if (!mainHeadline) {
+    const eraHeadlines = {
+      'Civil War': ['RED ARMY ADVANCES ON ALL FRONTS', 'REVOLUTION TRIUMPHANT'],
+      'NEP': ['NEW ECONOMIC POLICY BEARS FRUIT', 'INDUSTRIAL PRODUCTION RISES'],
+      'Succession': ['PARTY UNITY STRONGER THAN EVER', 'LENINIST LINE PREVAILS'],
+      'Stalin consolidating': ['GREAT LEADER GUIDES SOCIALIST CONSTRUCTION', 'FIVE-YEAR PLAN TARGETS EXCEEDED'],
+      'Collectivization': ['COLLECTIVE FARMS TRANSFORM COUNTRYSIDE', 'KULAK RESISTANCE CRUSHED'],
+      'Pre-Terror': ['CONGRESS OF VICTORS CELEBRATES ACHIEVEMENTS', 'VIGILANCE INTENSIFIES'],
+      'Post-Terror': ['ENEMIES BROUGHT TO JUSTICE', 'PARTY PURGED OF TRAITORS'],
+      'Late Stalin': ['GREAT STALIN LEADS NATION TO NEW VICTORIES', 'COSMOPOLITAN AGENTS NEUTRALIZED'],
+      'Thaw': ['PARTY CORRECTS ERRORS OF THE PAST', 'PEACEFUL COEXISTENCE ADVANCES'],
+      'Khrushchev': ['SOVIET SCIENCE CONQUERS SPACE', 'COMMUNIST FUTURE WITHIN REACH'],
+      'Brezhnev': ['DEVELOPED SOCIALISM ACHIEVES NEW STAGE', 'DÉTENTE ADVANCES PEACE'],
+      'Stagnation': ['STEADY PROGRESS ON ALL ECONOMIC FRONTS', 'PARTY ENSURES STABILITY'],
+      'Late Brezhnev': ['INTERNATIONALIST DUTY FULFILLED', 'SOCIALIST ACHIEVEMENTS DEFENDED'],
+      'Perestroika': ['RESTRUCTURING OPENS NEW ERA', 'GLASNOST REVEALS PATH TO RENEWAL'],
+      'Collapse': ['PARTY SEEKS NEW FORMS OF UNITY', 'REFORM ENTERS DECISIVE PHASE']
+    };
+    const hl = eraHeadlines[era] || ['PARTY CONGRESS CONCLUDES SUCCESSFULLY'];
+    mainHeadline = hl[Math.floor(Math.random() * hl.length)];
+  }
+
+  // ===== SUBHEADLINE: Reflect the player's specific choice =====
+  let subhead = '';
+  if (choice && choice.response) {
+    // Extract the key consequence from the choice response (first sentence)
+    const firstSentence = choice.response.split(/\.\s/)[0];
+    // Rewrite in Pravda-speak
+    if (choice.loyalty >= 8) {
+      subhead = `Comrade ${char.n} demonstrates exemplary devotion to Party principles at Congress`;
+    } else if (choice.loyalty <= -10) {
+      subhead = `Certain delegates express views requiring further ideological study`;
+    } else if (choice.reputation >= 8) {
+      subhead = `Comrade ${char.n}'s bold position wins widespread support among delegates`;
+    } else if (choice.cunning >= 10) {
+      subhead = `Comrade ${char.n}'s skilled maneuvering noted by Congress observers`;
+    } else if (choice.survival < 0.6) {
+      subhead = `Tensions mark Congress proceedings as sharp debates divide delegates`;
+    } else if (choice.reputation <= -8) {
+      subhead = `Congress delegates reaffirm commitment to collective discipline`;
+    } else {
+      subhead = `The ${congress.name} concludes with unanimous adoption of all resolutions`;
+    }
+  } else {
+    subhead = `Delegates affirm commitment to the Party's general line`;
+  }
+
+  // ===== BODY: Mix era flavor with choice-specific content =====
+  const bodySnippets = [];
+  bodySnippets.push(`The ${congress.name} of the Communist Party concluded its work in ${month} ${year} amid scenes of great enthusiasm.`);
+
+  // Add a choice-reflective body paragraph
+  if (choice && choice.response) {
+    // Sanitize and Pravda-ify the response
+    const resp = choice.response;
+    if (choice.loyalty > 5) {
+      bodySnippets.push(`In a display of party unity, delegates praised the constructive contributions of leading comrades to the Congress's work.`);
+    } else if (choice.loyalty < -5) {
+      bodySnippets.push(`The Congress noted that certain deviations from the correct line require vigilant attention from all Party organs.`);
+    }
+    if (choice.cunning > 5) {
+      bodySnippets.push(`Political observers noted the sophisticated maneuvering of several delegates who demonstrated mastery of the Congress's complex proceedings.`);
+    }
+    if (choice.reputation > 5) {
+      bodySnippets.push(`Several delegates received sustained applause for their contributions to the Congress's deliberations on questions of Party and state.`);
+    }
+  }
+
+  // Era-specific filler
+  if (year < 1930) {
+    bodySnippets.push(`Production figures for the current period show ${Math.floor(Math.random()*15)+95}% fulfillment of planned targets in key industrial sectors.`);
+  } else if (year < 1953) {
+    bodySnippets.push(`The Congress unanimously affirmed the correctness of the Party's general line under the wise leadership of Comrade ${congress.leader}.`);
+  } else if (year < 1985) {
+    bodySnippets.push(`Delegates from all ${15} Union Republics expressed full support for the Central Committee's domestic and foreign policy course.`);
+  } else {
+    bodySnippets.push(`The Congress addressed the urgent tasks of restructuring and renewal facing Soviet society in the current historical moment.`);
+  }
+
+  // Alliance news
+  const allies = Object.entries(gameState.alliances).filter(([,r]) => r.relation === 'ally');
+  if (allies.length > 0) {
+    const allyName = allies[Math.floor(Math.random() * allies.length)][0];
+    bodySnippets.push(`Comrade ${char.n} was observed in close consultation with Comrade ${allyName} during Congress intermissions.`);
+  }
 
   // Sidebar stats
   const sidebar = `Loyalty: ${gameState.loyalty} | Cunning: ${gameState.cunning} | Reputation: ${gameState.reputation} | Congresses survived: ${gameState.congressIndex + 1}`;
@@ -2311,10 +2335,10 @@ function renderCongress(area) {
     ${statusHtml}
     ${factionHtml}
     ${charCard}
-    ${!isIronCurtain ? allianceHtml : ''}
     ${trackerHtml}
     <div id="narrative" class="typewriter">${narrativeHtml}</div>
     <div id="choices">${choicesHtml}</div>
+    ${!isIronCurtain ? allianceHtml : ''}
     ${gameState.log.length > 0 ? `<div class="event-log">${gameState.log.slice(-8).map(l => `<p class="${l.important ? 'important' : ''}">${l.text}</p>`).join('')}</div>` : ''}
   `;
 
