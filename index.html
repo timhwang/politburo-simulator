@@ -126,7 +126,7 @@
 
   #status-bar {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: 10px;
     margin-bottom: 20px;
     font-size: 0.9em;
@@ -144,6 +144,13 @@
     font-size: 0.85em;
     text-transform: uppercase;
     letter-spacing: 1px;
+  }
+
+  .stat-effect {
+    font-size: 0.65em;
+    margin-top: 4px;
+    line-height: 1.3;
+    min-height: 1.3em;
   }
 
   .stat-value {
@@ -2171,27 +2178,90 @@ function renderCongress(area) {
     const orthoTooltip = isReformNow
       ? 'Orthodox Reputation — your accumulated ideological commitments now endanger you as reforms advance'
       : 'Orthodox Reputation — tracks your record of ideological commitment. Helps under authoritarian rule, hurts during reforms.';
+
+    // Compute effect annotations for each stat
+    const _authEras = ['Stalin consolidating','Collectivization','Pre-Terror','Post-Terror','Late Stalin'];
+    const _reformEras = ['Thaw','Perestroika','Collapse'];
+    const _terrorEras = ['Pre-Terror','Post-Terror'];
+    const _isAuth = _authEras.includes(congress.era);
+    const _isReform = _reformEras.includes(congress.era);
+    const _isTerror = _terrorEras.includes(congress.era);
+
+    // Loyalty effects
+    const loyaltyEffects = [];
+    if (_isAuth) {
+      if (gameState.loyalty < 20) loyaltyEffects.push({text: '−35% survival', color: '#ff4444'});
+      else if (gameState.loyalty < 40) loyaltyEffects.push({text: '−25% survival', color: '#ff6644'});
+      if (_isTerror && gameState.loyalty < 60) loyaltyEffects.push({text: 'Terror penalty', color: '#ff4444'});
+      if (gameState.loyalty > 50) loyaltyEffects.push({text: '+survival', color: '#44cc44'});
+    } else if (_isReform) {
+      if (gameState.loyalty > 80) loyaltyEffects.push({text: 'Too rigid', color: '#ff6644'});
+    }
+    if (gameState.loyalty > 75) loyaltyEffects.push({text: '−1 Cunning/turn', color: '#ccaa44'});
+    if (loyaltyEffects.length === 0) loyaltyEffects.push({text: 'No active effect', color: '#6a5a3a'});
+
+    // Cunning effects
+    const cunningEffects = [];
+    const cunningMod = ((gameState.cunning - 50) * 0.004 * 100).toFixed(1);
+    if (gameState.cunning > 50) cunningEffects.push({text: `+${cunningMod}% survival`, color: '#44cc44'});
+    else if (gameState.cunning < 50) cunningEffects.push({text: `${cunningMod}% survival`, color: '#ff6644'});
+    if (gameState.cunning > 75) cunningEffects.push({text: '−2 Loy & Rep/turn', color: '#ccaa44'});
+    if (cunningEffects.length === 0) cunningEffects.push({text: 'No active effect', color: '#6a5a3a'});
+
+    // Reputation effects
+    const repEffects = [];
+    if (gameState.reputation > 75) repEffects.push({text: '−1 Cunning/turn', color: '#ccaa44'});
+    if (gameState.reputation > 0) repEffects.push({text: '−Orthodoxy/turn', color: '#44cc44'});
+    if (repEffects.length === 0) repEffects.push({text: 'No active effect', color: '#6a5a3a'});
+
+    // Orthodoxy effects
+    const orthoEffects = [];
+    if (_isAuth) {
+      const orthoBonus = (orthoVal * 0.003 * 100).toFixed(1);
+      if (orthoVal > 0) orthoEffects.push({text: `+${orthoBonus}% survival`, color: '#44cc44'});
+      orthoEffects.push({text: 'Accumulating', color: '#ccaa44'});
+    } else if (isReformNow) {
+      const orthoPenMap = {'Thaw': 0.003, 'Khrushchev': 0.002, 'Perestroika': 0.004, 'Collapse': 0.005};
+      const penRate = orthoPenMap[congress.era] || 0.001;
+      const orthoPen = (orthoVal * penRate * 100).toFixed(1);
+      if (orthoVal > 0) orthoEffects.push({text: `−${orthoPen}% survival`, color: '#ff6644'});
+      orthoEffects.push({text: 'Decaying', color: '#44cc44'});
+    } else {
+      const brezPen = (orthoVal * 0.001 * 100).toFixed(1);
+      if (orthoVal > 0) orthoEffects.push({text: `−${brezPen}% survival`, color: '#ccaa44'});
+      orthoEffects.push({text: 'Decaying slowly', color: '#6a5a3a'});
+    }
+    if (orthoEffects.length === 0) orthoEffects.push({text: 'No active effect', color: '#6a5a3a'});
+
+    function renderEffects(effects) {
+      return effects.map(e => `<span style="color:${e.color}">${e.text}</span>`).join(' · ');
+    }
+
     statusHtml = `
       <div id="status-bar">
         <div class="stat-box" title="Loyalty to party leadership">
           <div class="stat-label">Loyalty</div>
           <div class="stat-value">${gameState.loyalty}</div>
           <div class="stat-bar"><div class="stat-bar-fill loyalty-fill" style="width:${gameState.loyalty}%"></div></div>
+          <div class="stat-effect">${renderEffects(loyaltyEffects)}</div>
         </div>
         <div class="stat-box" title="Political cunning and survival instinct">
           <div class="stat-label">Cunning</div>
           <div class="stat-value">${gameState.cunning}</div>
           <div class="stat-bar"><div class="stat-bar-fill cunning-fill" style="width:${gameState.cunning}%"></div></div>
+          <div class="stat-effect">${renderEffects(cunningEffects)}</div>
         </div>
         <div class="stat-box" title="Standing among peers">
           <div class="stat-label">Reputation</div>
           <div class="stat-value">${gameState.reputation}</div>
           <div class="stat-bar"><div class="stat-bar-fill reputation-fill" style="width:${gameState.reputation}%"></div></div>
+          <div class="stat-effect">${renderEffects(repEffects)}</div>
         </div>
         <div class="stat-box" title="${orthoTooltip}">
           <div class="stat-label">Orthodoxy${orthoWarning}</div>
           <div class="stat-value" style="color:${orthoColor}">${orthoVal}</div>
           <div class="stat-bar"><div class="stat-bar-fill" style="width:${orthoVal}%;background:${orthoColor}"></div></div>
+          <div class="stat-effect">${renderEffects(orthoEffects)}</div>
         </div>
       </div>
     `;
@@ -2262,7 +2332,7 @@ function renderCongress(area) {
       <div id="portrait-game" class="portrait-wrapper"></div>
       <h3>${gameState.character.n}</h3>
       <div class="char-detail">${gameState.character.nat} &bull; Age ${congress.year - gameState.character.born}</div>
-      <div class="char-detail">Status: <span style="color:${memberStatus === 'Full Member' ? '#66ff66' : memberStatus === 'Candidate Member' ? '#ffcc44' : '#ff6666'}">${memberStatus || 'Not on Politburo'}</span></div>
+      <div class="char-detail">Status: <span style="color:${memberStatus === 'Full Member' ? '#66ff66' : memberStatus === 'Candidate Member' ? '#ffcc44' : '#ff6666'}">${memberStatus || 'Not on Politburo'}</span> <span style="font-size:0.8em;color:${memberStatus === 'Full Member' ? '#44cc44' : '#ff6644'}">${memberStatus === 'Full Member' ? '(+5% survival, +2 Rep/turn)' : memberStatus === 'Candidate Member' ? '(−3% survival)' : '(−12% survival, exposed)'}</span></div>
       ${!isIronCurtain ? `<div class="char-detail">Historical fate: <span class="${fateClass(gameState.character)}">${fateDescription(gameState.character)}</span></div>` : ''}
     </div>
   `;
